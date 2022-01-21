@@ -111,7 +111,7 @@ Create the Topic:
 ```
 /kafka/bin/kafka-topics.sh \
 --create \
---bootstrap-server kafka-1:2181 \
+--bootstrap-server kafka-1:9092 \
 --replication-factor 1 \
 --partitions 3 \
 --topic Orders
@@ -133,7 +133,7 @@ The Kafka installation also ships with a script that allows us to produce and co
 We can then run the consumer that will receive that message on that Orders topic:
 
 ```
-docker exec -it zookeeper-1 bash
+docker exec -it kafka-1 bash
 
 /kafka/bin/kafka-console-consumer.sh \
 --bootstrap-server kafka-1:9092,kafka-2:9092,kafka-3:9092 \
@@ -143,7 +143,7 @@ docker exec -it zookeeper-1 bash
 With a consumer in place, we can start producing messages
 
 ```
-docker exec -it zookeeper-1 bash
+docker exec -it kafka-1 bash
 
 echo "New Order: 1" | \
 /kafka/bin/kafka-console-producer.sh \
@@ -179,3 +179,92 @@ With compose we'd like to be able to build our containers, pointing to a dockerf
 We'll also use volumes to mount config files.
 
 Important note that producers and consumers are running kafka images because kafka installation comes prepacked with example consumers and producers as scripts. We override the kafka entrypoint with bash and stdin so it starts in a paused state so that we have run scripts on these instances.
+
+Let's start with an empty docker-compose.yaml file:
+
+```
+version: "3.8"
+services:
+```
+
+## Zookeeper
+
+```
+zookeeper-1:
+  container_name: zookeeper-1
+  image: aimvector/zookeeper:3.0.0
+  build:
+    context: ./zookeeper
+  volumes:
+    - ./config/zookeeper-1/zookeeper.properties:/kafka/config/zookeeper.properties
+    - ./data/zookeeper-1/:/tmp/zookeeper/
+  networks:
+    - kafka
+```
+
+## Kafka-1 to 3
+
+We run 3 kafka instances.
+Changing the service name, container name and config mount folder:
+
+```
+kafka-1:
+  container_name: kafka-1
+  image: aimvector/kafka:3.0.0
+  build:
+    context: .
+  volumes:
+    - ./config/kafka-1/server.properties:/kafka/config/server.properties
+    - ./data/kafka-1/:/tmp/kafka-logs/
+  networks:
+    - kafka
+```
+
+## Producer
+
+```
+kafka-producer:
+  container_name: kafka-producer
+  image: aimvector/kafka:3.0.0
+  build:
+    context: .
+  working_dir: /kafka
+  entrypoint: /bin/bash
+  stdin_open: true
+  tty: true
+  networks:
+    - kafka
+```
+
+## Consumer
+
+```
+kafka-consumer:
+  container_name: kafka-consumer
+  image: aimvector/kafka:3.0.0
+  build:
+    context: .
+  working_dir: /kafka
+  entrypoint: /bin/bash
+  stdin_open: true
+  tty: true
+  networks:
+    - kafka
+```
+
+## Newtworks
+
+```
+networks:
+  kafka:
+    name: kafka
+```
+
+## Start the containers
+
+```
+cd messaging\kafka
+
+docker compose build
+docker compose up
+```
