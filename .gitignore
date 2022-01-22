@@ -1,1 +1,23 @@
+# kafka
 /messaging/kafka/data
+
+# Visual Studio Code
+.vscode
+
+# Rider
+.idea
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+msbuild.log
+msbuild.err
+msbuild.wrn
