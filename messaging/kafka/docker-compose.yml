@@ -75,6 +75,20 @@ services:
         networks:
             - kafka
 
+    consumer:
+        container_name: consumer
+        image: aimvector/consumer:3.0.0
+        depends_on:
+            - kafka-1
+            - kafka-2
+            - kafka-3
+        build:
+            context: ./applications/Consumer
+        environment:
+            - TOPIC=Orders
+        networks:
+            - kafka
+
 networks:
     kafka:
         name: kafka
