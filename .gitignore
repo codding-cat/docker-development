@@ -21,3 +21,7 @@ bld/
 msbuild.log
 msbuild.err
 msbuild.wrn
+messaging/kafka/applications/AuthorizationService/AuthorizationService/cert.pem
+messaging/kafka/applications/AuthorizationService/AuthorizationService/key.pem
+messaging/kafka/applications/AuthorizationService/AuthorizationService/key2.pem
+messaging/kafka/applications/AuthorizationService/AuthorizationService/public.pem
