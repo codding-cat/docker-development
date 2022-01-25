@@ -77,6 +77,13 @@ public class UsersController: ControllerBase
         try
         {
             var (isLoggedIn, access, refresh) = await _usersService.LoginAsync(loginData);
+            HttpContext.Response.Cookies.Append(
+                "refresh-token",
+                refresh,
+                new CookieOptions
+                {
+                    HttpOnly = true
+                });
             return Ok(access);
         }
         catch (AuthenticationException e)

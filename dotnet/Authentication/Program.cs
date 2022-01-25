@@ -51,7 +51,8 @@ builder.Services.AddScoped<IAccessTokenService, AccessTokenService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IRefreshTokenValidator, RefreshTokenValidator>();
 
-builder.Services.AddScoped<IUsersProvider, UsersProvider>();
+builder.Services.AddScoped<IUsersRepository, UsersRepository>();
+builder.Services.AddScoped<ITokensRepository, TokensRepository>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 
 #endregion

@@ -9,48 +9,59 @@ namespace Authentication.Services;
 
 public class UsersService: IUsersService
 {
-    private readonly IUsersProvider _provider;
+    private readonly IUsersRepository _usersRepository;
+    private readonly ITokensRepository _tokensRepository;
     private readonly IAccessTokenService _accessTokenService;
     private readonly IRefreshTokenService _refreshTokenService;
     
-    public UsersService(IUsersProvider provider,
+    public UsersService(IUsersRepository usersRepository,
+        ITokensRepository tokensRepository,
         IAccessTokenService accessTokenService,
         IRefreshTokenService refreshTokenService)
     {
-        _provider = provider;
+        _usersRepository = usersRepository;
+        _tokensRepository = tokensRepository;
         _accessTokenService = accessTokenService;
         _refreshTokenService = refreshTokenService;
     }
     
     public async Task<IEnumerable<User>> GetAllAsync()
     {
-        return await _provider.GetAllAsync();
+        return await _usersRepository.GetAllAsync();
     }
 
     public async Task<(bool success, string accessToken, string refreshToken)> LoginAsync(LoginData data)
     {
-        var user = await _provider.GetByNameAsync(data.Name);
+        var user = await _usersRepository.GetByNameAsync(data.Name);
         if (user == null)
             throw new AuthenticationException($"User with name {data.Name} not fount");
         var hashedPassword = HashPassword(data.Password, user.Salt);
         if (hashedPassword != user.PasswordHashed)
             throw new AuthenticationException($"Wrong password");
+        
         var accessToken = _accessTokenService.Generate(user);
         var refreshToken = _refreshTokenService.Generate(user);
+        
+        await _tokensRepository.AddToken(new Token
+        {
+            UserId = user.Id,
+            RefreshToken = refreshToken
+        });
+        
         return (true, accessToken, refreshToken);
     }
 
     public async Task<User> CreateAsync(User user)
     {
-        var existingUser = await _provider.GetByNameAsync(user.Name);
+        var existingUser = await _usersRepository.GetByNameAsync(user.Name);
         if (existingUser != null)
             throw new DataConflictException($"User with name '{user.Name}' already exist");
-        existingUser = await _provider.GetByEmailAsync(user.Email);
+        existingUser = await _usersRepository.GetByEmailAsync(user.Email);
         if (existingUser != null)
             throw new DataConflictException($"User with e-mail '{user.Email}' already exist");
         user.Salt = GenerateSalt();
         user.PasswordHashed = HashPassword(user.Password, user.Salt);
-        var createdUser = await _provider.CreateAsync(user);
+        var createdUser = await _usersRepository.CreateAsync(user);
         if (createdUser == null)
             throw new Exception("Error occurred when creating a new user");
         return createdUser;
