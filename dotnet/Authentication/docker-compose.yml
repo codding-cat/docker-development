@@ -1,0 +1,22 @@
+version: '3.9'
+
+services:
+  auth:
+    container_name: auth-service
+    image: auth:1.0.0
+    build:
+      context: .
+    networks:
+      - auth
+
+  postgres:
+    container_name: postgres
+    image: postgres:13.4-alpine
+    environment:
+      - POSTGRES_PASSWORD=password
+    ports:
+      - 5434:5432
+
+networks:
+  auth:
+    name: auth
