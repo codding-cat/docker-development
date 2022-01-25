@@ -3,8 +3,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Authentication.Infrastructure;
 
-public class UsersDbContext : DbContext
+public class CiunexDbContext : DbContext
 {
-    public DbSet<User> Users { get; set; }
-
+    public CiunexDbContext(DbContextOptions<CiunexDbContext> options)
+        : base(options)
+    { }
+    
+    public DbSet<User>? Users { get; set; }
 }
