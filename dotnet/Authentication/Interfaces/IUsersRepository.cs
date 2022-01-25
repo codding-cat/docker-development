@@ -2,7 +2,7 @@
 
 namespace Authentication.Interfaces;
 
-public interface IUsersProvider
+public interface IUsersRepository
 {
     Task<List<User>> GetAllAsync();
     Task<User?> CreateAsync(User user);

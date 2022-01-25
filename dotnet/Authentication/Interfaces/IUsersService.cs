@@ -5,6 +5,6 @@ namespace Authentication.Interfaces;
 public interface IUsersService
 {
     Task<IEnumerable<User>> GetAllAsync();
-    Task<bool> LoginAsync(LoginData data);
+    Task<(bool success, string accessToken, string refreshToken)> LoginAsync(LoginData data);
     Task<User> CreateAsync(User user);
 }

@@ -7,11 +7,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Authentication.Providers;
 
-public class UsersProvider: IUsersProvider
+public class UsersRepository: IUsersRepository
 {
     private readonly CiunexDbContext _dbContext;
 
-    public UsersProvider(CiunexDbContext dbContext)
+    public UsersRepository(CiunexDbContext dbContext)
     {
         _dbContext = dbContext;
     }
