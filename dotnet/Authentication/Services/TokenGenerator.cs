@@ -16,7 +16,7 @@ public class TokenGenerator: ITokenGenerator
         JwtSecurityToken securityToken = new(issuer,audience,
             claims,
             DateTime.UtcNow,
-            DateTime.UtcNow.AddMinutes(expires),
+            DateTime.UtcNow.AddSeconds(expires),
             credentials);
         return new JwtSecurityTokenHandler().WriteToken(securityToken);
     }

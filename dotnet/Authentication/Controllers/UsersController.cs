@@ -2,6 +2,7 @@
 using Authentication.Exceptions;
 using Authentication.Interfaces;
 using Authentication.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Authentication.Controllers;
@@ -24,6 +25,7 @@ public class UsersController: ControllerBase
     /// </summary>
     /// <response code="500">Internal server error</response>
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> Users()
     {
         try
@@ -44,6 +46,7 @@ public class UsersController: ControllerBase
     /// <response code="400">Validation problem</response>
     /// <response code="500">Internal server error</response>
     [HttpPost]
+    [Authorize]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateUser([FromBody] User user)
     {
@@ -71,6 +74,7 @@ public class UsersController: ControllerBase
     /// <response code="401">Unathorized</response>
     /// /// <response code="500">Internal server error</response>
     [HttpPost(nameof(Login))]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginData loginData)
     {
