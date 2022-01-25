@@ -1,5 +1,6 @@
 using Authentication.Infrastructure;
 using Authentication.Interfaces;
+using Authentication.Providers;
 using Authentication.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +13,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<CiunexDbContext>(options =>
     options.UseNpgsql(builder.Configuration["CiunexDbConnectionString"]));
 
-builder.Services.AddSingleton<IUsersService, UsersService>();
+builder.Services.AddScoped<IUsersProvider, UsersProvider>();
+builder.Services.AddScoped<IUsersService, UsersService>();
 
 var app = builder.Build();
 

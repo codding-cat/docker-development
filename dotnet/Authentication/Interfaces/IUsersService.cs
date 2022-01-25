@@ -4,14 +4,7 @@ namespace Authentication.Interfaces;
 
 public interface IUsersService
 {
-    Task<List<User>> GetUsers();
-    Task<User?> CreateUser(User user);
-
-    Task<User?> GetByUserName(string name);
-    
-    Task<User?> GetByEmail(string name);
-    
-    Task<User?> GetUserById(Guid id);
-
-    Task<bool> CheckLoginData(LoginData loginData);
+    Task<IEnumerable<User>> GetAllAsync();
+    Task<bool> LoginAsync(LoginData data);
+    Task<User> CreateAsync(User user);
 }

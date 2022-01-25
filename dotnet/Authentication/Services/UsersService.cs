@@ -1,84 +1,52 @@
-﻿using System.Security.Cryptography;
-using Authentication.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
+﻿using System.Security.Authentication;
+using System.Security.Cryptography;
+using Authentication.Exceptions;
 using Authentication.Interfaces;
 using Authentication.Models;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
-using Microsoft.EntityFrameworkCore;
 
 namespace Authentication.Services;
 
 public class UsersService: IUsersService
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IUsersProvider _provider;
 
-    public UsersService(IServiceProvider serviceProvider)
+    public UsersService(IUsersProvider provider)
     {
-        _serviceProvider = serviceProvider;
+        _provider = provider;
     }
-    
-    public async Task<List<User>> GetUsers()
+    public async Task<IEnumerable<User>> GetAllAsync()
     {
-        using var scope = _serviceProvider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<CiunexDbContext>();
-        if (context.Users == null)
-            return new List<User>();
-        return await context.Users.ToListAsync();
+        return await _provider.GetAllAsync();
     }
 
-    public async Task<User?> CreateUser(User user)
+    public async Task<bool> LoginAsync(LoginData data)
     {
+        var user = await _provider.GetByNameAsync(data.Name);
+        if (user == null)
+            throw new AuthenticationException($"User with name {data.Name} not fount");
+        var hashedPassword = HashPassword(data.Password, user.Salt);
+        if (hashedPassword != user.PasswordHashed)
+            throw new AuthenticationException($"Wrong password");
+        return true;
+    }
+
+    public async Task<User> CreateAsync(User user)
+    {
+        var existingUser = await _provider.GetByNameAsync(user.Name);
+        if (existingUser != null)
+            throw new DataConflictException($"User with name '{user.Name}' already exist");
+        existingUser = await _provider.GetByEmailAsync(user.Email);
+        if (existingUser != null)
+            throw new DataConflictException($"User with e-mail '{user.Email}' already exist");
         user.Salt = GenerateSalt();
         user.PasswordHashed = HashPassword(user.Password, user.Salt);
-        using var scope = _serviceProvider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<CiunexDbContext>();
-        if (context.Users == null)
-            return null;
-        await context.Users.AddAsync(user);
-        await context.SaveChangesAsync();
-        return user;
-    }
-
-    public async Task<User?> GetByUserName(string name)
-    {
-        using var scope = _serviceProvider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<CiunexDbContext>();
-        if (context.Users == null)
-            return null;
-        return await context.Users.Where(u => u.Name == name).FirstOrDefaultAsync();
+        var createdUser = await _provider.CreateAsync(user);
+        if (createdUser == null)
+            throw new Exception("Error occurred when creating a new user");
+        return createdUser;
     }
     
-    public async Task<User?> GetByEmail(string email)
-    {
-        using var scope = _serviceProvider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<CiunexDbContext>();
-        if (context.Users == null)
-            return null;
-        return await context.Users.Where(u => u.Email == email).FirstOrDefaultAsync();
-    }
-
-    public async Task<User?> GetUserById(Guid id)
-    {
-        using var scope = _serviceProvider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<CiunexDbContext>();
-        if (context.Users == null)
-            return null;
-        return await context.Users.Where(u => u.Id == id).FirstOrDefaultAsync();
-    }
-
-    public async Task<bool> CheckLoginData(LoginData loginData)
-    {
-        using var scope = _serviceProvider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<CiunexDbContext>();
-        if (context.Users == null)
-            return false;
-        var selectedUser = await GetByUserName(loginData.Name);
-        if (selectedUser == null)
-            return false;
-        var hashedPassword = HashPassword(loginData.Password, selectedUser.Salt);
-        return hashedPassword == selectedUser.PasswordHashed;
-    }
-
     private byte[] GenerateSalt()
     {
         var salt = new byte[128 / 8];
@@ -96,12 +64,4 @@ public class UsersService: IUsersService
             iterationCount: 100000,
             numBytesRequested: 256 / 8));
     }
-    
-    // private CiunexDbContext? GetDbContext()
-    // {
-    //     using var scope = _serviceProvider.CreateScope();
-    //     var context = scope.ServiceProvider.GetRequiredService<CiunexDbContext>();
-    //     if (context.Users == null)
-    //         return null;
-    // }
 }
