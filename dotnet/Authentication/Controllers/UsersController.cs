@@ -76,7 +76,8 @@ public class UsersController: ControllerBase
     {
         try
         {
-            return Ok(await _usersService.LoginAsync(loginData));
+            var (isLoggedIn, access, refresh) = await _usersService.LoginAsync(loginData);
+            return Ok(access);
         }
         catch (AuthenticationException e)
         {

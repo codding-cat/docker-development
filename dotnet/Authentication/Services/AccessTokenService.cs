@@ -4,7 +4,7 @@ using Authentication.Models;
 
 namespace Authentication.Services;
 
-public class AccessTokenService
+public class AccessTokenService : IAccessTokenService
 {
     private readonly ITokenGenerator _tokenGenerator;
     private readonly JwtSettings _jwtSettings;
