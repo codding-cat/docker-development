@@ -12,7 +12,7 @@ public class AccessTokenService : IAccessTokenService
     public AccessTokenService(ITokenGenerator tokenGenerator, JwtSettings jwtSettings) =>
         (_tokenGenerator, _jwtSettings) = (tokenGenerator, jwtSettings);
 
-    public string Generate(User user)
+    public string Generate(User user, string ip = "")
     {
         List<Claim> claims = new()
         {
@@ -20,6 +20,7 @@ public class AccessTokenService : IAccessTokenService
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.Name, user.Name),
             new Claim(ClaimTypes.Role, user.Role.ToString()),
+            new Claim(ClaimTypes.UserData, ip)
         };
         return _tokenGenerator.Generate(_jwtSettings.AccessTokenSecret, _jwtSettings.Issuer, _jwtSettings.Audience,
             _jwtSettings.AccessTokenExpirationSeconds, claims);

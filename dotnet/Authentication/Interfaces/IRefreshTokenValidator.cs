@@ -1,4 +1,6 @@
-﻿namespace Authentication.Interfaces;
+﻿using System.Security.Claims;
+
+namespace Authentication.Interfaces;
 
 /// <summary>
 /// Interface for validating refresh token.
@@ -10,5 +12,7 @@ public interface IRefreshTokenValidator
     /// </summary>
     /// <param name="refreshToken">The refresh token.</param>
     /// <returns>True if token is valid,otherwise false.</returns>
-    bool Validate(string refreshToken);
+    bool ValidateRefreshToken(string refreshToken);
+
+    IEnumerable<Claim> GetClaimsFromExpiredToken(string expiredToken);
 }

@@ -5,6 +5,7 @@ using Authentication.Models;
 using Authentication.Providers;
 using Authentication.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -87,6 +88,12 @@ builder.Services.AddScoped<IUsersService, UsersService>();
 var app = builder.Build();
 
 #region Middleware
+
+// for production because of reverse proxy:
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 if (app.Environment.IsDevelopment())
 {

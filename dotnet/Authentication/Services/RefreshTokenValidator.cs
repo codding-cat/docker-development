@@ -1,4 +1,5 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 using Authentication.Interfaces;
 using Authentication.Models;
@@ -17,7 +18,7 @@ public class RefreshTokenValidator : IRefreshTokenValidator
         _logger = logger;
     }
 
-    public bool Validate(string refreshToken)
+    public bool ValidateRefreshToken(string refreshToken)
     {
         var validationParameters = new TokenValidationParameters
         {
@@ -43,5 +44,34 @@ public class RefreshTokenValidator : IRefreshTokenValidator
             _logger.LogError(e, "Jwt token validation error occurred");
         }
         return false;
+    }
+
+    public IEnumerable<Claim> GetClaimsFromExpiredToken(string expiredToken)
+    {
+        var validationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = false,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.AccessTokenSecret)),
+            ValidIssuer = _jwtSettings.Issuer,
+            ValidAudience = _jwtSettings.Audience,
+            ClockSkew = TimeSpan.Zero
+        };
+        JwtSecurityTokenHandler jwtSecurityTokenHandler = new();
+        try
+        {
+            jwtSecurityTokenHandler.ValidateToken(expiredToken, validationParameters,
+                out SecurityToken validatedToken);
+            var tk = jwtSecurityTokenHandler.ReadJwtToken(expiredToken);
+            
+            return tk.Claims;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Jwt token validation error occurred");
+        }
+        return Enumerable.Empty<Claim>();
     }
 }

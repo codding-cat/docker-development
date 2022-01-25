@@ -1,9 +1,12 @@
 ﻿using System.Security.Authentication;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using Authentication.Exceptions;
+using Authentication.Extensions;
 using Authentication.Interfaces;
 using Authentication.Models;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Authentication.Services;
 
@@ -16,16 +19,19 @@ public class UsersService: IUsersService
     private readonly ITokensRepository _tokensRepository;
     private readonly IAccessTokenService _accessTokenService;
     private readonly IRefreshTokenService _refreshTokenService;
+    private readonly IRefreshTokenValidator _validator;
     
     public UsersService(IUsersRepository usersRepository,
         ITokensRepository tokensRepository,
         IAccessTokenService accessTokenService,
-        IRefreshTokenService refreshTokenService)
+        IRefreshTokenService refreshTokenService,
+        IRefreshTokenValidator validator)
     {
         _usersRepository = usersRepository;
         _tokensRepository = tokensRepository;
         _accessTokenService = accessTokenService;
         _refreshTokenService = refreshTokenService;
+        _validator = validator;
     }
     
     /// <summary>
@@ -43,7 +49,7 @@ public class UsersService: IUsersService
     /// <param name="data"></param>
     /// <returns></returns>
     /// <exception cref="AuthenticationException"></exception>
-    public async Task<(bool success, string accessToken, string refreshToken)> LoginAsync(LoginData data)
+    public async Task<(bool success, string accessToken, string refreshToken)> LoginAsync(LoginData data, string ip)
     {
         var user = await _usersRepository.GetByNameAsync(data.Name);
         if (user == null)
@@ -52,7 +58,7 @@ public class UsersService: IUsersService
         if (hashedPassword != user.PasswordHashed)
             throw new AuthenticationException($"Wrong password");
         
-        var accessToken = _accessTokenService.Generate(user);
+        var accessToken = _accessTokenService.Generate(user, ip);
         var refreshToken = _refreshTokenService.Generate(user);
         
         await _tokensRepository.AddToken(new Token
@@ -85,6 +91,78 @@ public class UsersService: IUsersService
         if (createdUser == null)
             throw new Exception("Error occurred when creating a new user");
         return createdUser;
+    }
+
+    public async Task<(string accessToken, string refreshToken)> RefreshTokenAsync(string expiredToken, string currIp)
+    {
+        var claims = _validator.GetClaimsFromExpiredToken(expiredToken).ToList();
+        
+        var claim = claims.FirstOrDefault(c => c.Type == ClaimTypes.UserData);
+        if (claim == null)
+            throw new AuthenticationException("Error parsing JWT");
+        var userIp = claim.Value;
+        if (currIp != userIp)
+            throw new AuthenticationException("Last and current Ip addresses are different");
+        
+        claim = claims.FirstOrDefault(c => c.Type == "id");
+        if (claim == null)
+            throw new AuthenticationException("Error parsing JWT");
+        Guid.TryParse(claim.Value, out var id);
+        var user = await _usersRepository.GetByIdAsync(id);
+        
+        if (user == null)
+            throw new Exception("User not fount");
+        
+        var accessToken = _accessTokenService.Generate(user, currIp);
+        var newRefreshToken = _refreshTokenService.Generate(user);
+        
+        // TODO необходимо сохранять несколько токенов для юзера, лучше удалять по Token.Id
+        await _tokensRepository.RemoveTokensByUserId(user.Id);
+        
+        await _tokensRepository.AddToken(new Token
+        {
+            UserId = user.Id,
+            RefreshToken = newRefreshToken
+        });
+        
+        return (accessToken, newRefreshToken);
+
+        // var userId = context.User.GetUserId();
+        // if (string.IsNullOrEmpty(userId))
+        //     throw new NullReferenceException("Error parsing JWT");
+        // var lastIp = context.User.GetUserLastIp();
+        // var currentIp = context.Connection.RemoteIpAddress?.ToString();
+        // if (lastIp != currentIp)
+        // {
+        //     // TODO разлогинить!
+        //     throw new AuthenticationException("Last and current Ip addresses are different");
+        // }
+        //
+        // if (!context.Request.Cookies.TryGetValue("refresh-token", out var refreshToken) || refreshToken == null)
+        //     throw new AuthenticationException("Error getting the refresh token");
+        //
+        // if (!_validator.Validate(refreshToken))
+        //     throw new AuthenticationException("Refresh token is invalid");
+        //
+        // Guid.TryParse(userId, out var id);
+        // var user = await _usersRepository.GetByIdAsync(id);
+        //
+        // if (user == null)
+        //     throw new Exception("User not fount");
+        //
+        // var accessToken = _accessTokenService.Generate(user, currentIp ?? "");
+        // var newRefreshToken = _refreshTokenService.Generate(user);
+        //
+        // // TODO необходимо сохранять несколько токенов для юзера, лучше удалять по Token.Id
+        // await _tokensRepository.RemoveTokensByUserId(user.Id);
+        //
+        // await _tokensRepository.AddToken(new Token
+        // {
+        //     UserId = user.Id,
+        //     RefreshToken = newRefreshToken
+        // });
+        //
+        // return (accessToken, newRefreshToken);
     }
     
     private byte[] GenerateSalt()

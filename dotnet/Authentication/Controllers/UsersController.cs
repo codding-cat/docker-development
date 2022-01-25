@@ -80,7 +80,9 @@ public class UsersController: ControllerBase
     {
         try
         {
-            var (isLoggedIn, access, refresh) = await _usersService.LoginAsync(loginData);
+            var userIp = HttpContext.Connection.RemoteIpAddress != null?
+                HttpContext.Connection.RemoteIpAddress.ToString() : "";
+            var (isLoggedIn, access, refresh) = await _usersService.LoginAsync(loginData, userIp);
             HttpContext.Response.Cookies.Append(
                 "refresh-token",
                 refresh,
@@ -99,6 +101,42 @@ public class UsersController: ControllerBase
         {
             Console.WriteLine(e);
             return Problem();
+        }
+    }
+
+    [HttpPost(nameof(RefreshToken))]
+    
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> RefreshToken([FromBody]string expiredToken)
+    {
+        var userIp = HttpContext.Connection.RemoteIpAddress != null?
+            HttpContext.Connection.RemoteIpAddress.ToString() : "";
+        try
+        {
+            var (access, refresh) = await _usersService.RefreshTokenAsync(expiredToken, userIp);
+            HttpContext.Response.Cookies.Append(
+                "refresh-token",
+                refresh,
+                new CookieOptions
+                {
+                    HttpOnly = true
+                });
+            return Ok(access);
+        }
+        catch (NullReferenceException e)
+        {
+            Console.WriteLine(e);
+            return ValidationProblem(e.Message);
+        }
+        catch (AuthenticationException e)
+        {
+            Console.WriteLine(e);
+            return Unauthorized(e.Message);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return Problem(e.Message);
         }
     }
 }
